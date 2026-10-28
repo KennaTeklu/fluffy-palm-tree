@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Profile Sweep — blocked-aware edition</title>
+<title>Profile Sweep — resilient edition</title>
 <style>
   :root {
     --bg:#0b0d12; --panel:#141821; --panel-2:#1a1f2b; --border:#252b3a;
@@ -98,6 +98,8 @@
   footer{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);
     color:var(--muted-2);font-size:11.5px;line-height:1.65}
   footer strong{color:var(--muted)}
+  footer ul{margin:8px 0 0;padding-left:18px}
+  footer li{margin:3px 0}
   details{margin-top:12px}
   summary{cursor:pointer;color:var(--muted);font-size:11.5px;user-select:none}
   summary:hover{color:var(--text)}
@@ -116,7 +118,7 @@
 
   <header>
     <h1>Profile Sweep</h1>
-    <p>Blocked-aware existence check. Login-walled platforms are flagged, not guessed.</p>
+    <p>Resilient existence check. Proxies fail forward; login walls are flagged, not guessed.</p>
   </header>
 
   <div class="label">1 · Platforms</div>
@@ -146,7 +148,14 @@
   </div>
 
   <footer>
-    <strong>Proxy order:</strong> <code>proxy.cors.sh</code> → <code>ThingProxy</code> → <code>allorigins</code> → <code>corsproxy.dev</code>. A dead proxy is skipped after a 2‑second health probe instead of an 18‑second timeout.
+    <strong>Proxy chain:</strong> your Cloudflare Worker → Corsfix → AllOrigins → ThingProxy.
+    A proxy is blacklisted for the session only after it fails on a real target — never after a synthetic health check.
+    <ul>
+      <li><strong>X / Twitter</strong> — direct fetch; most reliable route.</li>
+      <li><strong>YouTube</strong> — proxy + HTML parsing; usually accurate.</li>
+      <li><strong>Instagram / Facebook</strong> — login walls cause <em>blocked</em>; byte-size heuristics separate “missing” from “hidden”.</li>
+      <li><strong>TikTok</strong> — binary <code>uniqueId</code> vs <code>statusCode:10202</code> markers.</li>
+    </ul>
     <details>
       <summary>Show request log</summary>
       <div class="log" id="log">Waiting…</div>
@@ -169,7 +178,7 @@ const ICONS = {
 };
 
 /* ============================================================
-   2. PLATFORMS — with blocked patterns
+   2. PLATFORMS
    ============================================================ */
 const SITES = [
   {
@@ -179,8 +188,7 @@ const SITES = [
     notFound: [/This account doesn.t exist/i, /Account suspended/i,
                /"errors":\[\{[^}]*not found/i],
     blocked: [/Rate limit exceeded/i, /Something went wrong/i],
-    defaultOnNoMatch: 'found',
-    reliability: 'high'
+    defaultOnNoMatch: 'found'
   },
   {
     id: 'youtube', name: 'YouTube', short: 'YouTube',
@@ -189,19 +197,20 @@ const SITES = [
     notFound: [/This channel does not exist/i, /This page isn.t available/i,
                /The requested URL was not found/i],
     blocked: [/sign in to confirm/i, /Verify you.re human/i, /captcha/i],
-    defaultOnNoMatch: 'found',
-    reliability: 'medium'
+    defaultOnNoMatch: 'found'
   },
   {
     id: 'instagram', name: 'Instagram', short: 'Instagram',
     url: u => `https://www.instagram.com/${u}/`,
     tryDirect: false,
     notFound: [/Page Not Found/i, /Sorry, this page isn.t available/i],
-    // Instagram login wall: real and fake both hit this.
     blocked: [/accounts\/login/i, /Log in . Instagram/i,
-              /"require_login":true/i, /"message":"Page Not Found"/i],
-    defaultOnNoMatch: 'uncertain',
-    reliability: 'low'
+              /"require_login":true/i],
+    // Byte-size heuristic applied after pattern matching:
+    //   small page + notFound marker  -> not_found
+    //   large page + blocked marker   -> blocked
+    //   no marker at all              -> uncertain
+    defaultOnNoMatch: 'uncertain'
   },
   {
     id: 'facebook', name: 'Facebook', short: 'Facebook',
@@ -209,36 +218,36 @@ const SITES = [
     tryDirect: false,
     notFound: [/This content isn.t available/i, /content isn.t available right now/i],
     blocked: [/You must log in/i, /log in to continue/i, /\/login\//],
-    defaultOnNoMatch: 'uncertain',
-    reliability: 'low'
+    defaultOnNoMatch: 'uncertain'
   },
   {
     id: 'tiktok', name: 'TikTok', short: 'TikTok',
     url: u => `https://www.tiktok.com/@${u}`,
     tryDirect: false,
-    notFound: [/"statusCode":10202/, /10221/],
+    notFound: [/"statusCode":10202/, /"statusCode":10221/],
     blocked: [/Verify to continue/i, /captcha/i, /Please wait/i],
-    defaultOnNoMatch: 'uncertain',
-    reliability: 'medium'
+    defaultOnNoMatch: 'uncertain'
   }
 ];
 
 /* ============================================================
-   3. CORS PROXIES — active first, health-checked
+   3. PROXY CHAIN
+   Replace YOUR-WORKER with your deployed Cloudflare Worker URL.
+   Leave it in place even if not deployed — the code skips it if it
+   fails on the real target and moves on to the next proxy.
    ============================================================ */
 const PROXIES = [
-  { name: 'cors.sh',       build: u => `https://proxy.cors.sh/${u}` },
-  { name: 'thingproxy',    build: u => `https://thingproxy.freeboard.io/fetch/${u}` },
-  { name: 'allorigins',    build: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
-  { name: 'corsproxy.dev', build: u => `https://api.corsproxy.dev/proxy?url=${encodeURIComponent(u)}` }
+  { name: 'my-worker',   build: u => `https://YOUR-WORKER.workers.dev/?url=${encodeURIComponent(u)}` },
+  { name: 'corsfix',     build: u => `https://corsfix.com/${u}` },
+  { name: 'allorigins',  build: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
+  { name: 'thingproxy',  build: u => `https://thingproxy.freeboard.io/fetch/${u}` }
 ];
 
-/* Health probe: a tiny, stable target. If a proxy fails this, skip it for the session. */
-const HEALTH_URL = 'https://httpbin.org/html';
-const proxyHealth = new Map(); // name -> 'ok' | 'fail' | 'unknown'
+/* Per-session blacklist. A proxy is added only after it fails on a real target. */
+const deadThisSession = new Set();
 
 /* ============================================================
-   4. STATE + HELPERS
+   4. STATE + LOG
    ============================================================ */
 const selected = new Set();
 let results = [];
@@ -252,7 +261,10 @@ function log(msg) {
   el.textContent += `\n[${time}] ${msg}`;
   el.scrollTop = el.scrollHeight;
 }
-function logReset() { $('#log').textContent = 'session start'; }
+function logReset() {
+  $('#log').textContent = 'session start';
+  deadThisSession.clear();
+}
 
 /* ============================================================
    5. PLATFORM PICKER
@@ -352,27 +364,11 @@ async function fetchWithTimeout(url, ms, init = {}) {
   }
 }
 
-async function probeProxy(proxy) {
-  if (proxyHealth.get(proxy.name) === 'fail') return false;
-  if (proxyHealth.get(proxy.name) === 'ok') return true;
-  try {
-    const res = await fetchWithTimeout(proxy.build(HEALTH_URL), 2500);
-    const ok = res.ok;
-    proxyHealth.set(proxy.name, ok ? 'ok' : 'fail');
-    log(`health ${proxy.name} → ${ok ? 'ok' : 'HTTP '+res.status}`);
-    return ok;
-  } catch (err) {
-    proxyHealth.set(proxy.name, 'fail');
-    log(`health ${proxy.name} → ${err.name}`);
-    return false;
-  }
-}
-
+/* Tries each non-blacklisted proxy in order. Only blacklists after a real failure. */
 async function fetchViaProxy(target) {
   const failures = [];
   for (const p of PROXIES) {
-    const healthy = await probeProxy(p);
-    if (!healthy) { failures.push(`${p.name} unhealthy`); continue; }
+    if (deadThisSession.has(p.name)) { failures.push(`${p.name} (dead)`); continue; }
     const proxied = p.build(target);
     const t0 = performance.now();
     try {
@@ -381,32 +377,41 @@ async function fetchViaProxy(target) {
       if (!res.ok) {
         failures.push(`${p.name} HTTP ${res.status}`);
         log(`proxy ${p.name} → HTTP ${res.status} (${ms}ms)`);
+        if (res.status === 401 || res.status === 403 || res.status === 404) {
+          deadThisSession.add(p.name);
+          log(`proxy ${p.name} → blacklisted for session`);
+        }
         continue;
       }
       const text = await res.text();
       if (!text || text.length < 80) {
         failures.push(`${p.name} empty`);
-        log(`proxy ${p.name} → empty (${ms}ms)`);
+        log(`proxy ${p.name} → empty body (${ms}ms)`);
         continue;
       }
-      log(`proxy ${p.name} → ${text.length}b (${ms}ms)`);
+      log(`proxy ${p.name} → ${text.length}b (${ms}ms) ✓`);
       return { text, via: p.name };
     } catch (err) {
       const ms = Math.round(performance.now() - t0);
       failures.push(`${p.name} ${err.name}`);
       log(`proxy ${p.name} → ${err.name} (${ms}ms)`);
+      if (err.name === 'TypeError') {
+        deadThisSession.add(p.name);
+        log(`proxy ${p.name} → blacklisted for session`);
+      }
     }
   }
   throw new Error(`proxies failed: ${failures.join(' | ')}`);
 }
 
 /* ============================================================
-   8. PER-SITE CHECKER — blocked-aware
+   8. PER-SITE CHECKER
    ============================================================ */
 async function checkSite(site, username) {
   const url = site.url(username);
   let html = null, via = null;
 
+  /* --- direct attempt (only for sites known to work from a plain page) --- */
   if (site.tryDirect) {
     const t0 = performance.now();
     try {
@@ -430,6 +435,7 @@ async function checkSite(site, username) {
     }
   }
 
+  /* --- proxy fallback --- */
   if (html === null) {
     try {
       const r = await fetchViaProxy(url);
@@ -440,14 +446,56 @@ async function checkSite(site, username) {
     }
   }
 
-  /* blocked check runs FIRST — a login wall overrides not-found patterns */
+  const size = html.length;
+
+  /* --- TikTok binary markers first (they are unambiguous) --- */
+  if (site.id === 'tiktok') {
+    if (site.notFound.some(re => re.test(html))) {
+      return { status: 'not_found', detail: `statusCode marker via ${via}` };
+    }
+    const uid = new RegExp(`"uniqueId":"${username}"`, 'i');
+    if (uid.test(html)) {
+      return { status: 'found', detail: `"uniqueId" matched via ${via} (${size}b)` };
+    }
+    if (site.blocked.some(re => re.test(html))) {
+      return { status: 'blocked', detail: `captcha / verify shell via ${via}` };
+    }
+    return { status: 'uncertain',
+      detail: `no marker matched (${size}b via ${via}) — likely soft rate-limited` };
+  }
+
+  /* --- Instagram byte-size heuristic --- */
+  if (site.id === 'instagram') {
+    const notFoundHit = site.notFound.some(re => re.test(html));
+    const blockedHit  = site.blocked.some(re => re.test(html));
+
+    if (notFoundHit && size < 80000) {
+      return { status: 'not_found',
+        detail: `small 404 page (${size}b) via ${via}` };
+    }
+    if (blockedHit && size > 150000) {
+      return { status: 'blocked',
+        detail: `large login shell (${size}b) via ${via} — existence not determinable` };
+    }
+    if (notFoundHit) {
+      return { status: 'not_found',
+        detail: `"Page Not Found" (${size}b) via ${via}` };
+    }
+    if (blockedHit) {
+      return { status: 'blocked',
+        detail: `login wall (${size}b) via ${via} — existence not determinable` };
+    }
+    return { status: 'uncertain',
+      detail: `no marker matched (${size}b via ${via})` };
+  }
+
+  /* --- standard blocked → not-found → fallback order --- */
   for (const re of site.blocked || []) {
     if (re.test(html)) {
       return { status: 'blocked',
-        detail: `login wall / rate limit <code>${re.source}</code> via ${via} — existence not determinable` };
+        detail: `login wall <code>${re.source}</code> via ${via}` };
     }
   }
-
   for (const re of site.notFound || []) {
     if (re.test(html)) {
       return { status: 'not_found',
@@ -455,19 +503,9 @@ async function checkSite(site, username) {
     }
   }
 
-  if (site.id === 'tiktok') {
-    const uid = new RegExp(`"uniqueId":"${username}"`, 'i');
-    if (uid.test(html)) {
-      return { status: 'found', detail: `"uniqueId" matched via ${via}` };
-    }
-    return { status: 'uncertain',
-      detail: `no binary marker via ${via} — retry later` };
-  }
-
-  const fallback = site.defaultOnNoMatch || 'uncertain';
   return {
-    status: fallback,
-    detail: `no marker matched (${html.length}b via ${via})`
+    status: site.defaultOnNoMatch || 'uncertain',
+    detail: `no marker matched (${size}b via ${via})`
   };
 }
 
@@ -529,22 +567,24 @@ async function inspectProfile(r) {
       text = prox.text;
     }
 
-    const markers = [...(r.site.blocked||[]), ...(r.site.notFound||[])]
+    const allMarkers = [...(r.site.blocked||[]), ...(r.site.notFound||[])];
+    const hits = allMarkers
       .map(re => ({ re, idx: text.search(re) }))
       .filter(m => m.idx >= 0)
       .sort((a,b) => a.idx - b.idx);
 
-    let snippet;
-    if (markers.length) {
-      const idx = markers[0].idx;
+    let snippet, marker = 'first 700 bytes';
+    if (hits.length) {
+      const idx = hits[0].idx;
       snippet = text.slice(Math.max(0, idx - 180), idx + 700);
+      marker = `around <code>${hits[0].re.source}</code> at byte ${idx}`;
     } else {
       snippet = text.slice(0, 700);
     }
 
     c.innerHTML = `
       <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px;">
-        ${r.site.name} · <code>${r.url}</code> · ${text.length} bytes
+        ${r.site.name} · <code>${r.url}</code> · ${text.length} bytes · ${marker}
       </div>
       <pre style="white-space:pre-wrap;word-break:break-all;background:var(--panel-2);
         padding:10px;border-radius:8px;font-size:10.5px;color:#c7d2fe;margin:0;
