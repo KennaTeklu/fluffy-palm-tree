@@ -3,202 +3,178 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Profile Sweep</title>
+<title>Profile Sweep — website edition</title>
 <style>
   :root {
-    --bg: #0f1115;
-    --panel: #171a21;
-    --border: #2a2f3a;
-    --text: #e6e9ef;
-    --muted: #8b93a1;
-    --found: #22c55e;
-    --not-found: #ef4444;
-    --uncertain: #f59e0b;
-    --error: #6b7280;
-    --checking: #3b82f6;
-    --accent: #6366f1;
-    --radius: 10px;
+    --bg:#0b0d12; --panel:#141821; --panel-2:#1a1f2b; --border:#252b3a;
+    --text:#e7eaf0; --muted:#8b93a1; --muted-2:#5c6472;
+    --found:#22c55e; --not-found:#ef4444; --uncertain:#f59e0b;
+    --error:#6b7280; --checking:#3b82f6; --accent:#6366f1;
+    --radius:12px;
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    width: 480px;
-    min-height: 460px;
-    background: var(--bg);
-    color: var(--text);
-    font: 13px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    padding: 14px;
-  }
-  h1 { font-size: 15px; font-weight: 600; margin: 0 0 2px; letter-spacing: -0.01em; }
-  .sub { color: var(--muted); font-size: 11.5px; margin-bottom: 14px; }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  body{min-height:100vh;padding:28px 16px 48px;display:flex;justify-content:center}
+  .app{width:100%;max-width:720px}
 
-  .label {
-    font-size: 10px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    margin: 0 0 6px;
-    font-weight: 600;
-  }
+  /* header */
+  header{margin-bottom:22px}
+  h1{font-size:19px;font-weight:700;margin:0 0 4px;letter-spacing:-.01em}
+  header p{margin:0;color:var(--muted);font-size:12.5px}
 
-  /* ---------- platform picker ---------- */
-  .platforms {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
-  }
-  .platform {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    padding: 10px 2px 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    user-select: none;
-    font: inherit;
-    color: inherit;
-    transition: border-color .12s, background .12s, transform .06s;
-  }
-  .platform:hover { border-color: #3a4150; }
-  .platform:active { transform: scale(.97); }
-  .platform svg { width: 20px; height: 20px; color: var(--muted); transition: color .12s; }
-  .platform span { font-size: 9.5px; color: var(--muted); transition: color .12s; }
-  .platform.on { border-color: var(--accent); background: rgba(99,102,241,.13); }
-  .platform.on svg, .platform.on span { color: var(--text); }
+  /* section labels */
+  .label{font-size:10.5px;color:var(--muted-2);text-transform:uppercase;
+    letter-spacing:.09em;font-weight:700;margin:20px 0 8px}
+  .label:first-of-type{margin-top:0}
 
-  .row-tools { display: flex; gap: 6px; margin: 8px 0 14px; }
-  .mini {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    border-radius: 7px;
-    padding: 3px 8px;
-    font-size: 10.5px;
-    cursor: pointer;
-    font: inherit;
-  }
-  .mini:hover { color: var(--text); border-color: #3a4150; }
+  /* platform picker */
+  .platforms{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .platform{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:12px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;
+    cursor:pointer;user-select:none;font:inherit;color:inherit;
+    transition:border-color .12s,background .12s,transform .06s}
+  .platform:hover{border-color:#343b4d}
+  .platform:active{transform:scale(.97)}
+  .platform svg{width:22px;height:22px;color:var(--muted);transition:color .12s}
+  .platform span{font-size:10px;color:var(--muted);transition:color .12s;text-align:center;line-height:1.2}
+  .platform.on{border-color:var(--accent);background:rgba(99,102,241,.14)}
+  .platform.on svg,.platform.on span{color:var(--text)}
+  .platform[data-reliability="low"]{position:relative}
+  .platform[data-reliability="low"]::after{content:"";position:absolute;top:6px;right:6px;
+    width:5px;height:5px;border-radius:50%;background:var(--uncertain);opacity:.8}
 
-  /* ---------- username ---------- */
-  .input-row { display: flex; gap: 8px; margin-bottom: 12px; }
-  input {
-    flex: 1;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text);
-    padding: 9px 11px;
-    font-size: 13px;
-    outline: none;
-    font: inherit;
-  }
-  input:focus { border-color: var(--accent); }
-  input:disabled { opacity: .45; cursor: not-allowed; }
-  button.primary {
-    background: var(--accent);
-    color: #fff;
-    border: 0;
-    border-radius: var(--radius);
-    padding: 9px 16px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    font: inherit;
-  }
-  button.primary:disabled { opacity: .4; cursor: not-allowed; }
+  .tools{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+  .chip{background:transparent;border:1px solid var(--border);color:var(--muted);
+    border-radius:8px;padding:4px 10px;font-size:11.5px;cursor:pointer;font:inherit}
+  .chip:hover{color:var(--text);border-color:#343b4d}
+  .legend{font-size:11px;color:var(--muted-2);margin-left:auto}
+  .legend .dot{margin-right:3px;vertical-align:middle}
 
-  /* ---------- results ---------- */
-  #results { display: grid; gap: 6px; margin-bottom: 12px; }
-  .result {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 8px 10px;
-  }
-  .result svg.picon { width: 15px; height: 15px; color: var(--muted); flex-shrink: 0; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--muted); }
-  .dot.found { background: var(--found); }
-  .dot.not_found { background: var(--not-found); }
-  .dot.uncertain { background: var(--uncertain); }
-  .dot.error { background: var(--error); }
-  .dot.checking { background: var(--checking); animation: pulse 1s infinite; }
-  @keyframes pulse { 50% { opacity: .3; } }
-  .meta { flex: 1; min-width: 0; }
-  .name { font-weight: 600; font-size: 12.5px; }
-  .detail {
-    color: var(--muted); font-size: 10.5px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .actions { display: flex; gap: 6px; flex-shrink: 0; }
-  .actions button {
-    padding: 4px 9px; font-size: 11px; font-weight: 500;
-    border-radius: 7px; cursor: pointer; font: inherit;
-    background: transparent; border: 1px solid var(--border); color: var(--text);
-  }
-  .actions button:hover { border-color: var(--accent); }
+  /* input row */
+  .input-row{display:flex;gap:8px}
+  input{flex:1;background:var(--panel);border:1px solid var(--border);
+    border-radius:var(--radius);color:var(--text);padding:11px 13px;font-size:14px;
+    outline:none;font:inherit;transition:border-color .12s}
+  input:focus{border-color:var(--accent)}
+  input:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:var(--accent);color:#fff;border:0;border-radius:var(--radius);
+    padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;
+    font:inherit;transition:opacity .12s}
+  button.primary:disabled{opacity:.4;cursor:not-allowed}
 
-  /* ---------- embed ---------- */
-  #embed-wrap {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 10px;
-    min-height: 80px;
-  }
-  #embed-title {
-    font-size: 10px; color: var(--muted); margin-bottom: 8px;
-    text-transform: uppercase; letter-spacing: .07em;
-  }
-  #embed-container { overflow: auto; }
-  .empty { color: var(--muted); font-size: 11.5px; padding: 6px 2px; }
-  .banner {
-    font-size: 10.5px; color: var(--muted);
-    border-top: 1px solid var(--border);
-    margin-top: 12px; padding-top: 10px; line-height: 1.5;
+  /* results */
+  #results{display:grid;gap:7px;margin-top:14px}
+  .result{display:flex;align-items:flex-start;gap:11px;background:var(--panel);
+    border:1px solid var(--border);border-radius:var(--radius);padding:11px 13px}
+  .result svg.picon{width:17px;height:17px;color:var(--muted);flex-shrink:0;margin-top:1px}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:7px;
+    background:var(--muted)}
+  .dot.found{background:var(--found);box-shadow:0 0 0 3px rgba(34,197,94,.15)}
+  .dot.not_found{background:var(--not-found);box-shadow:0 0 0 3px rgba(239,68,68,.15)}
+  .dot.uncertain{background:var(--uncertain);box-shadow:0 0 0 3px rgba(245,158,11,.15)}
+  .dot.error{background:var(--error)}
+  .dot.checking{background:var(--checking);animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.3}}
+  .meta{flex:1;min-width:0}
+  .name{font-weight:600;font-size:13px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .badge{font-size:9.5px;font-weight:600;padding:1px 6px;border-radius:5px;
+    text-transform:uppercase;letter-spacing:.05em}
+  .badge.found{background:rgba(34,197,94,.15);color:#4ade80}
+  .badge.not_found{background:rgba(239,68,68,.15);color:#f87171}
+  .badge.uncertain{background:rgba(245,158,11,.15);color:#fbbf24}
+  .badge.error{background:rgba(107,114,128,.2);color:#9ca3af}
+  .badge.checking{background:rgba(59,130,246,.15);color:#60a5fa}
+  .detail{color:var(--muted);font-size:11.5px;margin-top:3px;word-break:break-word}
+  .detail code{background:var(--panel-2);padding:1px 5px;border-radius:4px;
+    font-size:10.5px;color:#a5b4fc;font-family:ui-monospace,monospace}
+  .actions{display:flex;gap:6px;flex-shrink:0;align-self:center}
+  .actions button{padding:5px 11px;font-size:11.5px;font-weight:500;border-radius:7px;
+    cursor:pointer;font:inherit;background:transparent;border:1px solid var(--border);
+    color:var(--text);transition:border-color .12s}
+  .actions button:hover{border-color:var(--accent)}
+
+  /* embed */
+  .embed-wrap{background:var(--panel);border:1px solid var(--border);
+    border-radius:var(--radius);padding:13px;margin-top:16px;min-height:90px}
+  .embed-title{font-size:10.5px;color:var(--muted-2);margin-bottom:10px;
+    text-transform:uppercase;letter-spacing:.07em;font-weight:700}
+  #embed-container{overflow:auto}
+  .empty{color:var(--muted);font-size:12.5px;padding:8px 2px}
+
+  /* footer */
+  footer{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);
+    color:var(--muted-2);font-size:11.5px;line-height:1.65}
+  footer strong{color:var(--muted)}
+  footer ul{margin:8px 0 0;padding-left:18px}
+  footer li{margin:3px 0}
+  details{margin-top:12px}
+  summary{cursor:pointer;color:var(--muted);font-size:11.5px;user-select:none}
+  summary:hover{color:var(--text)}
+  .log{margin-top:8px;background:var(--panel-2);border-radius:8px;padding:10px;
+    font-family:ui-monospace,monospace;font-size:10.5px;color:#9ca3af;
+    max-height:220px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+
+  @media (max-width:520px){
+    .platforms{grid-template-columns:repeat(3,1fr)}
+    .actions{flex-direction:column}
   }
 </style>
 </head>
 <body>
+<main class="app">
 
-<h1>Profile Sweep</h1>
-<div class="sub">Select platforms → enter username → scan. Runs entirely on this device.</div>
+  <header>
+    <h1>Profile Sweep</h1>
+    <p>Website edition — no extension, no server of your own. Uses public CORS proxies where needed. Results are heuristic.</p>
+  </header>
 
-<div class="label">1 · Platforms</div>
-<div class="platforms" id="platforms"></div>
-<div class="row-tools">
-  <button class="mini" id="all">Select all</button>
-  <button class="mini" id="none">Clear</button>
-</div>
+  <div class="label">1 · Platforms</div>
+  <div class="platforms" id="platforms"></div>
+  <div class="tools">
+    <button class="chip" id="all">Select all</button>
+    <button class="chip" id="none">Clear</button>
+    <span class="legend">
+      <span class="dot" style="background:var(--found)"></span>found
+      <span class="dot" style="background:var(--uncertain)"></span>uncertain
+      <span class="dot" style="background:var(--not-found)"></span>not found
+    </span>
+  </div>
 
-<div class="label">2 · Username</div>
-<div class="input-row">
-  <input id="username" placeholder="Choose a platform first" autocomplete="off" spellcheck="false" disabled>
-  <button class="primary" id="scan" disabled>Scan</button>
-</div>
+  <div class="label">2 · Username</div>
+  <div class="input-row">
+    <input id="username" placeholder="Choose a platform first" autocomplete="off" spellcheck="false" disabled>
+    <button class="primary" id="scan" disabled>Scan</button>
+  </div>
 
-<div id="results"></div>
+  <div id="results"></div>
 
-<div id="embed-wrap">
-  <div id="embed-title">Embed preview</div>
-  <div id="embed-container"><div class="empty">Run a scan, then press “Embed” on a found profile.</div></div>
-</div>
+  <div class="embed-wrap">
+    <div class="embed-title">Embed preview</div>
+    <div id="embed-container"><div class="empty">Run a scan, then press “Embed” on a found profile.</div></div>
+  </div>
 
-<div class="banner">
-  Results are heuristic leads, not proof of ownership. TikTok uses oEmbed; YouTube channel embeds use a deprecated legacy iframe and may fail.
-</div>
+  <footer>
+    <strong>How this works:</strong> a plain website cannot read cross-origin profile pages directly. X/Twitter is fetched directly (works today). The other four go through a fallback chain of public CORS proxies, which you do not control.
+    <ul>
+      <li><strong>X</strong> — direct <code>fetch</code>, reliable today, fragile if X changes its CORS policy.</li>
+      <li><strong>YouTube</strong> — proxy + HTML parsing, usually accurate.</li>
+      <li><strong>Instagram / Facebook</strong> — proxy + parsing, frequently blocked by login walls → often <em>uncertain</em>.</li>
+      <li><strong>TikTok</strong> — every profile returns HTTP 200, so a “found” signal is not trustworthy → often <em>uncertain</em>.</li>
+    </ul>
+    <details>
+      <summary>Show request log</summary>
+      <div class="log" id="log">Waiting…</div>
+    </details>
+  </footer>
 
+</main>
 <div id="fb-root"></div>
 
 <script>
 /* ============================================================
-   1. ICONS (inline SVG — no network, no icon font)
+   1. ICONS
    ============================================================ */
 const ICONS = {
   instagram: `<svg class="picon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/></svg>`,
@@ -209,56 +185,95 @@ const ICONS = {
 };
 
 /* ============================================================
-   2. PLATFORM CONFIGURATION
+   2. PLATFORMS — patterns + reliability metadata
    ============================================================ */
 const SITES = [
   {
-    id: 'instagram', name: 'Instagram', short: 'Instagram',
-    url: u => `https://www.instagram.com/${u}/`,
-    mode: 'html',
-    notFoundPatterns: [/Page Not Found/i, /Sorry, this page isn't available/i],
-    uncertainPatterns: [/login/i]
-  },
-  {
-    id: 'facebook', name: 'Facebook', short: 'Facebook',
-    url: u => `https://www.facebook.com/${u}`,
-    mode: 'html',
-    notFoundPatterns: [/content isn't available/i, /This content isn't available/i],
-    uncertainPatterns: [/log in/i, /login/i]
+    id: 'x', name: 'X / Twitter', short: 'X',
+    url: u => `https://x.com/${u}`,
+    tryDirect: true,                     // works today from a plain page
+    notFound: [/This account doesn.t exist/i, /Account suspended/i,
+               /"errors":\[\{[^}]*not found/i],
+    uncertain: [/Something went wrong/i, /Rate limit exceeded/i],
+    defaultOnNoMatch: 'found',
+    reliability: 'medium',
+    reliabilityNote: 'direct fetch works today; X may change policy'
   },
   {
     id: 'youtube', name: 'YouTube', short: 'YouTube',
     url: u => `https://www.youtube.com/@${u}`,
-    mode: 'html',
-    notFoundPatterns: [/This channel does not exist/i, /This page isn't available/i]
+    tryDirect: false,
+    notFound: [/This channel does not exist/i, /This page isn.t available/i,
+               /The requested URL was not found/i],
+    uncertain: [/sign in to confirm/i, /Verify you.re human/i, /captcha/i],
+    defaultOnNoMatch: 'found',
+    reliability: 'medium',
+    reliabilityNote: 'via proxy; usually accurate'
   },
   {
-    id: 'x', name: 'X / Twitter', short: 'X',
-    url: u => `https://x.com/${u}`,
-    mode: 'html',
-    notFoundPatterns: [/This account doesn’t exist/i, /Account suspended/i],
-    uncertainPatterns: [/Something went wrong/i]
+    id: 'instagram', name: 'Instagram', short: 'Instagram',
+    url: u => `https://www.instagram.com/${u}/`,
+    tryDirect: false,
+    notFound: [/Page Not Found/i, /Sorry, this page isn.t available/i,
+               /"message":"Page Not Found"/i, /"status":"fail"/i],
+    uncertain: [/accounts\/login/i, /Log in . Instagram/i, /"require_login":true/i],
+    defaultOnNoMatch: 'uncertain',
+    reliability: 'low',
+    reliabilityNote: 'login walls make results unreliable'
+  },
+  {
+    id: 'facebook', name: 'Facebook', short: 'Facebook',
+    url: u => `https://www.facebook.com/${u}`,
+    tryDirect: false,
+    notFound: [/This content isn.t available/i, /content isn.t available right now/i,
+               /"error":\{[^}]*"code":\d+/i],
+    uncertain: [/You must log in/i, /log in to continue/i, /\/login\//],
+    defaultOnNoMatch: 'uncertain',
+    reliability: 'low',
+    reliabilityNote: 'requires login; parsing is unreliable'
   },
   {
     id: 'tiktok', name: 'TikTok', short: 'TikTok',
     url: u => `https://www.tiktok.com/@${u}`,
-    mode: 'oembed',
-    oembedUrl: u => `https://www.tiktok.com/oembed?url=${encodeURIComponent(`https://www.tiktok.com/@${u}`)}`
+    tryDirect: false,
+    notFound: [/Couldn.t find this account/i, /This account doesn.t exist/i,
+               /"statusCode":10202/i, /"statusCode":10221/i],
+    uncertain: [/Verify to continue/i, /captcha/i, /Please wait/i],
+    defaultOnNoMatch: 'uncertain',
+    reliability: 'low',
+    reliabilityNote: 'every profile returns 200; no trustworthy signal'
   }
 ];
 
 /* ============================================================
-   3. STATE
+   3. CORS PROXY CHAIN — order matters
    ============================================================ */
-const selected = new Set();   // nothing selected by default — forces step 1
-let results = [];
-let scanning = false;
-
-const $ = sel => document.querySelector(sel);
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const PROXIES = [
+  { name: 'allorigins', build: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
+  { name: 'corsproxy.io', build: u => `https://corsproxy.io/?url=${encodeURIComponent(u)}` },
+  { name: 'cors.lol', build: u => `https://cors.lol/?url=${encodeURIComponent(u)}` }
+];
 
 /* ============================================================
-   4. PLATFORM PICKER
+   4. STATE + HELPERS
+   ============================================================ */
+const selected = new Set();
+let results = [];
+let scanning = false;
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const logEl = () => $('#log');
+function log(msg) {
+  const el = logEl();
+  const time = new Date().toLocaleTimeString();
+  el.textContent += `\n[${time}] ${msg}`;
+  el.scrollTop = el.scrollHeight;
+}
+function logReset() { logEl().textContent = 'session start'; }
+
+/* ============================================================
+   5. PLATFORM PICKER
    ============================================================ */
 function buildPicker() {
   const host = $('#platforms');
@@ -267,47 +282,37 @@ function buildPicker() {
     b.type = 'button';
     b.className = 'platform';
     b.dataset.id = site.id;
-    b.title = site.name;
+    b.dataset.reliability = site.reliability;
+    b.title = `${site.name} — ${site.reliabilityNote}`;
     b.innerHTML = `${ICONS[site.id]}<span>${site.short}</span>`;
-    b.addEventListener('click', () => togglePlatform(site.id));
+    b.addEventListener('click', () => {
+      selected.has(site.id) ? selected.delete(site.id) : selected.add(site.id);
+      syncUi({ clearResults: true });
+    });
     host.appendChild(b);
   }
 }
 
-function togglePlatform(id) {
-  selected.has(id) ? selected.delete(id) : selected.add(id);
-  syncUi({ clearResults: true });
-}
-
 function syncUi({ clearResults = false } = {}) {
-  document.querySelectorAll('.platform').forEach(el => {
-    el.classList.toggle('on', selected.has(el.dataset.id));
-  });
-
+  document.querySelectorAll('.platform').forEach(el =>
+    el.classList.toggle('on', selected.has(el.dataset.id)));
   const hasPlatform = selected.size > 0;
   const input = $('#username');
   input.disabled = !hasPlatform;
   input.placeholder = hasPlatform ? 'username (no @)' : 'Choose a platform first';
   if (!hasPlatform) input.value = '';
-
-  if (clearResults) {
-    results = [];
-    renderResults();
-    resetEmbed();
-  }
+  if (clearResults) { results = []; renderResults(); resetEmbed(); }
   updateScanState();
 }
 
 function updateScanState() {
-  const ready =
-    !scanning &&
-    selected.size > 0 &&
+  const ready = !scanning && selected.size > 0 &&
     $('#username').value.trim().replace(/^@/, '').length > 0;
   $('#scan').disabled = !ready;
 }
 
 /* ============================================================
-   5. RENDER
+   6. RENDER
    ============================================================ */
 function renderResults() {
   const wrap = $('#results');
@@ -315,17 +320,23 @@ function renderResults() {
   for (const r of results) {
     const row = document.createElement('div');
     row.className = 'result';
+    const badgeText = r.status === 'not_found' ? 'not found'
+                    : r.status === 'checking' ? 'checking'
+                    : r.status;
     row.innerHTML = `
       ${ICONS[r.site.id]}
       <span class="dot ${r.status}"></span>
       <div class="meta">
-        <div class="name">${r.site.name}</div>
+        <div class="name">
+          ${r.site.name}
+          <span class="badge ${r.status}">${badgeText}</span>
+        </div>
         <div class="detail">${r.detail || '—'}</div>
       </div>
       <div class="actions"></div>
     `;
     const actions = row.querySelector('.actions');
-    if (r.status === 'found') {
+    if (r.status === 'found' || r.status === 'uncertain') {
       const b = document.createElement('button');
       b.textContent = 'Embed';
       b.onclick = () => embedProfile(r);
@@ -342,62 +353,117 @@ function renderResults() {
 function upsertResult(partial) {
   results = results.filter(r => r.site.id !== partial.site.id);
   results.push(partial);
-  // keep display order identical to SITES order
-  results.sort((a, b) =>
-    SITES.findIndex(s => s.id === a.site.id) - SITES.findIndex(s => s.id === b.site.id)
-  );
+  results.sort((a,b) =>
+    SITES.findIndex(s=>s.id===a.site.id) - SITES.findIndex(s=>s.id===b.site.id));
   renderResults();
 }
 
 /* ============================================================
-   6. CHECK ENGINE
+   7. FETCH HELPERS
    ============================================================ */
-async function checkSite(site, username) {
-  const url = site.url(username);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
-
+async function fetchWithTimeout(url, ms, init = {}) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), ms);
   try {
-    if (site.mode === 'oembed') {
-      const res = await fetch(site.oembedUrl(username), { signal: controller.signal });
-      if (res.status === 404) return { status: 'not_found', detail: 'oEmbed 404' };
-      if (!res.ok) return { status: 'uncertain', detail: `oEmbed HTTP ${res.status}` };
-      const data = await res.json();
-      return { status: 'found', detail: 'oEmbed OK', embedHtml: data.html };
-    }
-
-    const res = await fetch(url, {
-      redirect: 'follow',
-      credentials: 'omit',
-      signal: controller.signal,
-      headers: { Accept: 'text/html' }
-    });
-
-    if (res.status === 404) return { status: 'not_found', detail: 'HTTP 404' };
-    if (res.status >= 500) return { status: 'error', detail: `HTTP ${res.status}` };
-    if (res.status !== 200) return { status: 'uncertain', detail: `HTTP ${res.status}` };
-
-    const text = await res.text();
-    for (const pat of site.notFoundPatterns || []) {
-      if (pat.test(text)) return { status: 'not_found', detail: pat.source };
-    }
-    for (const pat of site.uncertainPatterns || []) {
-      if (pat.test(text)) return { status: 'uncertain', detail: pat.source };
-    }
-    return { status: 'found', detail: 'HTTP 200' };
-  } catch (err) {
-    return {
-      status: 'error',
-      detail: err.name === 'AbortError' ? 'timeout' : (err.message || 'network error')
-    };
+    return await fetch(url, { ...init, signal: ctrl.signal, cache: 'no-store' });
   } finally {
-    clearTimeout(timer);
+    clearTimeout(to);
   }
 }
 
+/** Try each proxy until one returns text. Returns { text, via }. */
+async function fetchViaProxy(target) {
+  const failures = [];
+  for (const p of PROXIES) {
+    const proxied = p.build(target);
+    const t0 = performance.now();
+    try {
+      const res = await fetchWithTimeout(proxied, 18000);
+      const ms = Math.round(performance.now() - t0);
+      if (!res.ok) { failures.push(`${p.name} HTTP ${res.status}`); log(`proxy ${p.name} → HTTP ${res.status} (${ms}ms)`); continue; }
+      const text = await res.text();
+      if (!text || text.length < 100) { failures.push(`${p.name} empty`); log(`proxy ${p.name} → empty body`); continue; }
+      log(`proxy ${p.name} → ${text.length}b (${ms}ms)`);
+      return { text, via: p.name };
+    } catch (err) {
+      const ms = Math.round(performance.now() - t0);
+      failures.push(`${p.name} ${err.name}`);
+      log(`proxy ${p.name} → ${err.name} (${ms}ms)`);
+    }
+  }
+  throw new Error(`proxies failed: ${failures.join(' | ')}`);
+}
+
+/* ============================================================
+   8. PER-SITE CHECKER
+   ============================================================ */
+async function checkSite(site, username) {
+  const url = site.url(username);
+  let html = null, via = null;
+
+  /* --- attempt 1: direct (only for sites known to work today) --- */
+  if (site.tryDirect) {
+    const t0 = performance.now();
+    try {
+      const res = await fetchWithTimeout(url, 12000, {
+        credentials: 'omit',
+        headers: { Accept: 'text/html' }
+      });
+      const ms = Math.round(performance.now() - t0);
+      if (res.status === 404) {
+        log(`${site.id} direct → 404 (${ms}ms)`);
+        return { status: 'not_found', detail: `direct HTTP 404 (<code>direct</code>)` };
+      }
+      if (res.ok) {
+        html = await res.text();
+        via = 'direct';
+        log(`${site.id} direct → ${res.status} ${html.length}b (${ms}ms)`);
+      } else {
+        log(`${site.id} direct → HTTP ${res.status}, falling back to proxy`);
+      }
+    } catch (err) {
+      log(`${site.id} direct → ${err.name || err.message}`);
+    }
+  }
+
+  /* --- attempt 2: proxy chain --- */
+  if (html === null) {
+    try {
+      const r = await fetchViaProxy(url);
+      html = r.text;
+      via = r.via;
+    } catch (err) {
+      return { status: 'error', detail: `All routes failed — ${err.message}` };
+    }
+  }
+
+  /* --- evaluate patterns --- */
+  for (const re of site.notFound || []) {
+    if (re.test(html)) {
+      return { status: 'not_found',
+        detail: `matched <code>${re.source}</code> via ${via}` };
+    }
+  }
+  for (const re of site.uncertain || []) {
+    if (re.test(html)) {
+      return { status: 'uncertain',
+        detail: `hit <code>${re.source}</code> via ${via} — verify manually` };
+    }
+  }
+
+  const fallback = site.defaultOnNoMatch || 'uncertain';
+  return {
+    status: fallback,
+    detail: `no marker matched (${html.length}b via ${via})` +
+            (fallback === 'uncertain' ? ' — treat as a lead only' : '')
+  };
+}
+
+/* ============================================================
+   9. SCAN ORCHESTRATOR
+   ============================================================ */
 async function runScan() {
   if (scanning) return;
-
   const username = $('#username').value.trim().replace(/^@/, '');
   const active = SITES.filter(s => selected.has(s.id));
   if (!username || !active.length) return;
@@ -407,186 +473,143 @@ async function runScan() {
   results = [];
   renderResults();
   resetEmbed();
+  logReset();
+  log(`scan start · user="${username}" · ${active.length} platform(s)`);
 
   for (let i = 0; i < active.length; i++) {
     const site = active[i];
 
     upsertResult({
-      site,
-      username,
-      url: site.url(username),
-      status: 'checking',
-      detail: 'checking…'
+      site, username, url: site.url(username),
+      status: 'checking', detail: 'checking…'
     });
 
     const r = await checkSite(site, username);
     upsertResult({ ...r, site, username, url: site.url(username) });
+    log(`${site.id} → ${r.status} · ${r.detail?.replace(/<[^>]+>/g,'')}`);
 
-    if (i < active.length - 1) {
-      await sleep(700 + Math.random() * 900); // throttle: rate-limit safety
-    }
+    if (i < active.length - 1) await sleep(600 + Math.random() * 800);
   }
 
   scanning = false;
   updateScanState();
+  log('scan complete');
 }
 
 /* ============================================================
-   7. EMBED DISPATCHER
+   10. EMBED DISPATCHER (official scripts — work on plain sites)
    ============================================================ */
 function resetEmbed() {
-  $('#embed-title').textContent = 'Embed preview';
   $('#embed-container').innerHTML =
     '<div class="empty">Run a scan, then press “Embed” on a found profile.</div>';
 }
 
 async function embedProfile(r) {
-  const container = $('#embed-container');
-  container.innerHTML = '<div class="empty">loading embed…</div>';
-  $('#embed-title').textContent = `Embed preview — ${r.site.name}`;
-
+  const c = $('#embed-container');
+  c.innerHTML = '<div class="empty">loading embed…</div>';
   try {
     switch (r.site.id) {
-      case 'instagram': await embedInstagram(r.username, container); break;
-      case 'x':         await embedX(r.username, container);         break;
-      case 'tiktok':    await embedTikTok(r, container);             break;
-      case 'facebook':  await embedFacebook(r.username, container);  break;
-      case 'youtube':   embedYouTube(r.username, container);         break;
-      default: throw new Error('no embed handler');
+      case 'instagram': await embedInstagram(r.username, c); break;
+      case 'x':         await embedX(r.username, c);         break;
+      case 'tiktok':    embedTikTok(r.username, c);          break;
+      case 'facebook':  await embedFacebook(r.username, c);  break;
+      case 'youtube':   embedYouTube(r.username, c);         break;
     }
   } catch (err) {
-    container.innerHTML = `<div class="empty">Embed failed: ${err.message}</div>`;
+    c.innerHTML = `<div class="empty">Embed failed: ${err.message}</div>`;
   }
 }
 
-async function embedInstagram(username, container) {
-  container.innerHTML = `
+async function embedInstagram(username, c) {
+  c.innerHTML = `
     <blockquote class="instagram-media"
       data-instgrm-permalink="https://www.instagram.com/${username}/"
-      data-instgrm-version="14"
-      style="width:100%; margin:0;">
+      data-instgrm-version="14" style="width:100%;margin:0;">
     </blockquote>`;
   await loadScript('https://www.instagram.com/embed.js');
   if (window.instgrm) window.instgrm.Embeds.process();
 }
 
-async function embedX(username, container) {
+async function embedX(username, c) {
   await loadScript('https://platform.twitter.com/widgets.js');
-  container.innerHTML = '';
-  if (!window.twttr || !twttr.widgets) throw new Error('widgets.js unavailable');
+  c.innerHTML = '';
+  if (!window.twttr?.widgets) throw new Error('widgets.js unavailable');
   await twttr.widgets.createTimeline(
     { sourceType: 'profile', screenName: username },
-    container,
-    { height: 500, chrome: 'noheader nofooter' }
-  );
+    c, { height: 500, chrome: 'noheader nofooter' });
 }
 
-async function embedTikTok(r, container) {
-  let html = r.embedHtml;
-  if (!html) {
-    const res = await fetch(r.site.oembedUrl(r.username));
-    if (!res.ok) throw new Error(`oEmbed HTTP ${res.status}`);
-    html = (await res.json()).html;
-  }
-  container.innerHTML = html;
-  executeScripts(container);
-  await loadScript('https://www.tiktok.com/embed.js');
+function embedTikTok(username, c) {
+  // TikTok's embed requires a specific video ID — username-only embeds are not supported.
+  c.innerHTML = `
+    <div class="empty" style="margin-bottom:10px;">
+      TikTok only exposes per‑video embeds, not per‑profile embeds.
+      Open the profile to browse videos.
+    </div>
+    <button class="chip" onclick="window.open('https://www.tiktok.com/@${encodeURIComponent(username)}','_blank','noopener')">
+      Open @${username} on TikTok
+    </button>`;
 }
 
-async function embedFacebook(username, container) {
+async function embedFacebook(username, c) {
   await loadFacebookSDK();
-  container.innerHTML = `
+  c.innerHTML = `
     <div class="fb-page"
       data-href="https://www.facebook.com/${username}"
-      data-tabs="timeline"
-      data-width="460"
-      data-height="560"
-      data-small-header="true"
-      data-adapt-container-width="true"
-      data-hide-cover="false"
-      data-show-facepile="true">
-    </div>`;
-  if (window.FB) FB.XFBML.parse(container);
+      data-tabs="timeline" data-width="500" data-height="560"
+      data-small-header="true" data-adapt-container-width="true"
+      data-hide-cover="false" data-show-facepile="true"></div>`;
+  if (window.FB) FB.XFBML.parse(c);
 }
 
-function embedYouTube(username, container) {
+function embedYouTube(username, c) {
   const safe = encodeURIComponent(username);
-  container.innerHTML = `
-    <div class="empty" style="margin-bottom:8px;">
-      YouTube channel embeds are deprecated — the legacy iframe may not render.
+  c.innerHTML = `
+    <div class="empty" style="margin-bottom:10px;">
+      YouTube channel embeds are deprecated. Use the direct link below.
     </div>
-    <iframe width="100%" height="260" frameborder="0" allowfullscreen
-      src="https://www.youtube.com/embed?listType=user_uploads&list=${safe}">
-    </iframe>
-    <div style="margin-top:8px;">
-      <button class="mini" onclick="window.open('https://www.youtube.com/@${safe}','_blank','noopener')">
-        Open channel on YouTube
-      </button>
-    </div>`;
+    <button class="chip" onclick="window.open('https://www.youtube.com/@${safe}','_blank','noopener')">
+      Open @${username} on YouTube
+    </button>`;
 }
 
 /* ============================================================
-   8. SCRIPT LOADERS
+   11. SCRIPT LOADERS
    ============================================================ */
-const loadedScripts = new Set();
-
+const loaded = new Set();
 function loadScript(src) {
-  if (loadedScripts.has(src)) return Promise.resolve();
-  return new Promise((resolve, reject) => {
+  if (loaded.has(src)) return Promise.resolve();
+  return new Promise((res, rej) => {
     const s = document.createElement('script');
-    s.src = src;
-    s.async = true;
-    s.onload = () => { loadedScripts.add(src); resolve(); };
-    s.onerror = () => reject(new Error(`failed to load ${src}`));
+    s.src = src; s.async = true;
+    s.onload = () => { loaded.add(src); res(); };
+    s.onerror = () => rej(new Error(`failed: ${src}`));
     document.head.appendChild(s);
   });
 }
 
-function executeScripts(container) {
-  container.querySelectorAll('script').forEach(old => {
-    const s = document.createElement('script');
-    if (old.src) s.src = old.src;
-    else s.textContent = old.textContent;
-    s.async = true;
-    old.replaceWith(s);
-  });
-}
-
 function loadFacebookSDK() {
-  return new Promise((resolve, reject) => {
-    if (window.FB) return resolve();
-    window.fbAsyncInit = function () {
-      FB.init({ xfbml: true, version: 'v25.0' });
-      resolve();
-    };
+  return new Promise((res, rej) => {
+    if (window.FB) return res();
+    window.fbAsyncInit = () => { FB.init({ xfbml: true, version: 'v25.0' }); res(); };
     const js = document.createElement('script');
     js.src = 'https://connect.facebook.net/en_US/sdk.js';
     js.async = true;
-    js.onerror = () => reject(new Error('Facebook SDK failed'));
+    js.onerror = () => rej(new Error('Facebook SDK failed'));
     document.body.appendChild(js);
   });
 }
 
 /* ============================================================
-   9. BOOT
+   12. BOOT
    ============================================================ */
 buildPicker();
-
-$('#all').addEventListener('click', () => {
-  SITES.forEach(s => selected.add(s.id));
-  syncUi({ clearResults: true });
-});
-$('#none').addEventListener('click', () => {
-  selected.clear();
-  syncUi({ clearResults: true });
-});
+$('#all').addEventListener('click', () => { SITES.forEach(s => selected.add(s.id)); syncUi({clearResults:true}); });
+$('#none').addEventListener('click', () => { selected.clear(); syncUi({clearResults:true}); });
 $('#username').addEventListener('input', updateScanState);
-$('#username').addEventListener('keydown', e => {
-  if (e.key === 'Enter') runScan();
-});
+$('#username').addEventListener('keydown', e => { if (e.key === 'Enter') runScan(); });
 $('#scan').addEventListener('click', runScan);
-
-syncUi(); // initial: input disabled, scan disabled
+syncUi();
 </script>
 </body>
 </html>
