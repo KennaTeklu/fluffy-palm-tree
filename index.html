@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Profile Sweep — website edition</title>
+<title>Profile Sweep — binary edition</title>
 <style>
   :root {
     --bg:#0b0d12; --panel:#141821; --panel-2:#1a1f2b; --border:#252b3a;
@@ -19,31 +19,27 @@
   body{min-height:100vh;padding:28px 16px 48px;display:flex;justify-content:center}
   .app{width:100%;max-width:720px}
 
-  /* header */
   header{margin-bottom:22px}
   h1{font-size:19px;font-weight:700;margin:0 0 4px;letter-spacing:-.01em}
   header p{margin:0;color:var(--muted);font-size:12.5px}
 
-  /* section labels */
   .label{font-size:10.5px;color:var(--muted-2);text-transform:uppercase;
     letter-spacing:.09em;font-weight:700;margin:20px 0 8px}
   .label:first-of-type{margin-top:0}
 
-  /* platform picker */
   .platforms{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
   .platform{background:var(--panel);border:1px solid var(--border);border-radius:10px;
     padding:12px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;
     cursor:pointer;user-select:none;font:inherit;color:inherit;
-    transition:border-color .12s,background .12s,transform .06s}
+    transition:border-color .12s,background .12s,transform .06s;position:relative}
   .platform:hover{border-color:#343b4d}
   .platform:active{transform:scale(.97)}
   .platform svg{width:22px;height:22px;color:var(--muted);transition:color .12s}
   .platform span{font-size:10px;color:var(--muted);transition:color .12s;text-align:center;line-height:1.2}
   .platform.on{border-color:var(--accent);background:rgba(99,102,241,.14)}
   .platform.on svg,.platform.on span{color:var(--text)}
-  .platform[data-reliability="low"]{position:relative}
   .platform[data-reliability="low"]::after{content:"";position:absolute;top:6px;right:6px;
-    width:5px;height:5px;border-radius:50%;background:var(--uncertain);opacity:.8}
+    width:5px;height:5px;border-radius:50%;background:var(--uncertain);opacity:.9}
 
   .tools{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
   .chip{background:transparent;border:1px solid var(--border);color:var(--muted);
@@ -52,7 +48,6 @@
   .legend{font-size:11px;color:var(--muted-2);margin-left:auto}
   .legend .dot{margin-right:3px;vertical-align:middle}
 
-  /* input row */
   .input-row{display:flex;gap:8px}
   input{flex:1;background:var(--panel);border:1px solid var(--border);
     border-radius:var(--radius);color:var(--text);padding:11px 13px;font-size:14px;
@@ -64,13 +59,11 @@
     font:inherit;transition:opacity .12s}
   button.primary:disabled{opacity:.4;cursor:not-allowed}
 
-  /* results */
   #results{display:grid;gap:7px;margin-top:14px}
   .result{display:flex;align-items:flex-start;gap:11px;background:var(--panel);
     border:1px solid var(--border);border-radius:var(--radius);padding:11px 13px}
   .result svg.picon{width:17px;height:17px;color:var(--muted);flex-shrink:0;margin-top:1px}
-  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:7px;
-    background:var(--muted)}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:7px;background:var(--muted)}
   .dot.found{background:var(--found);box-shadow:0 0 0 3px rgba(34,197,94,.15)}
   .dot.not_found{background:var(--not-found);box-shadow:0 0 0 3px rgba(239,68,68,.15)}
   .dot.uncertain{background:var(--uncertain);box-shadow:0 0 0 3px rgba(245,158,11,.15)}
@@ -95,7 +88,6 @@
     color:var(--text);transition:border-color .12s}
   .actions button:hover{border-color:var(--accent)}
 
-  /* embed */
   .embed-wrap{background:var(--panel);border:1px solid var(--border);
     border-radius:var(--radius);padding:13px;margin-top:16px;min-height:90px}
   .embed-title{font-size:10.5px;color:var(--muted-2);margin-bottom:10px;
@@ -103,7 +95,6 @@
   #embed-container{overflow:auto}
   .empty{color:var(--muted);font-size:12.5px;padding:8px 2px}
 
-  /* footer */
   footer{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);
     color:var(--muted-2);font-size:11.5px;line-height:1.65}
   footer strong{color:var(--muted)}
@@ -127,7 +118,7 @@
 
   <header>
     <h1>Profile Sweep</h1>
-    <p>Website edition — no extension, no server of your own. Uses public CORS proxies where needed. Results are heuristic.</p>
+    <p>Binary existence check via public proxies. X and TikTok are reliable today; Instagram and Facebook are not.</p>
   </header>
 
   <div class="label">1 · Platforms</div>
@@ -151,18 +142,12 @@
   <div id="results"></div>
 
   <div class="embed-wrap">
-    <div class="embed-title">Embed preview</div>
-    <div id="embed-container"><div class="empty">Run a scan, then press “Embed” on a found profile.</div></div>
+    <div class="embed-title">Profile preview</div>
+    <div id="embed-container"><div class="empty">Run a scan to inspect the raw signal.</div></div>
   </div>
 
   <footer>
-    <strong>How this works:</strong> a plain website cannot read cross-origin profile pages directly. X/Twitter is fetched directly (works today). The other four go through a fallback chain of public CORS proxies, which you do not control.
-    <ul>
-      <li><strong>X</strong> — direct <code>fetch</code>, reliable today, fragile if X changes its CORS policy.</li>
-      <li><strong>YouTube</strong> — proxy + HTML parsing, usually accurate.</li>
-      <li><strong>Instagram / Facebook</strong> — proxy + parsing, frequently blocked by login walls → often <em>uncertain</em>.</li>
-      <li><strong>TikTok</strong> — every profile returns HTTP 200, so a “found” signal is not trustworthy → often <em>uncertain</em>.</li>
-    </ul>
+    <strong>What changed:</strong> the proxy chain now includes Corsfix and CodeTabs; TikTok detection looks for <code>"uniqueId":"…"</code> vs <code>"statusCode":10202</code>; Instagram/Facebook are marked <em>unreliable</em> because their login walls make anonymous checking impossible.
     <details>
       <summary>Show request log</summary>
       <div class="log" id="log">Waiting…</div>
@@ -185,19 +170,19 @@ const ICONS = {
 };
 
 /* ============================================================
-   2. PLATFORMS — patterns + reliability metadata
+   2. PLATFORMS — binary detection config
    ============================================================ */
 const SITES = [
   {
     id: 'x', name: 'X / Twitter', short: 'X',
     url: u => `https://x.com/${u}`,
-    tryDirect: true,                     // works today from a plain page
+    tryDirect: true,
     notFound: [/This account doesn.t exist/i, /Account suspended/i,
                /"errors":\[\{[^}]*not found/i],
     uncertain: [/Something went wrong/i, /Rate limit exceeded/i],
     defaultOnNoMatch: 'found',
-    reliability: 'medium',
-    reliabilityNote: 'direct fetch works today; X may change policy'
+    reliability: 'high',
+    reliabilityNote: 'direct fetch works; X may change policy'
   },
   {
     id: 'youtube', name: 'YouTube', short: 'YouTube',
@@ -214,19 +199,20 @@ const SITES = [
     id: 'instagram', name: 'Instagram', short: 'Instagram',
     url: u => `https://www.instagram.com/${u}/`,
     tryDirect: false,
-    notFound: [/Page Not Found/i, /Sorry, this page isn.t available/i,
-               /"message":"Page Not Found"/i, /"status":"fail"/i],
-    uncertain: [/accounts\/login/i, /Log in . Instagram/i, /"require_login":true/i],
+    // Instagram returns the same login-wall shell for real and fake users.
+    // We only mark NOT_FOUND if a proxy explicitly returns a 404-page body.
+    notFound: [/Page Not Found/i, /Sorry, this page isn.t available/i],
+    uncertain: [/accounts\/login/i, /Log in . Instagram/i,
+                /"require_login":true/i, /"message":"Page Not Found"/i],
     defaultOnNoMatch: 'uncertain',
     reliability: 'low',
-    reliabilityNote: 'login walls make results unreliable'
+    reliabilityNote: 'login wall masks existence; anonymous check impossible'
   },
   {
     id: 'facebook', name: 'Facebook', short: 'Facebook',
     url: u => `https://www.facebook.com/${u}`,
     tryDirect: false,
-    notFound: [/This content isn.t available/i, /content isn.t available right now/i,
-               /"error":\{[^}]*"code":\d+/i],
+    notFound: [/This content isn.t available/i, /content isn.t available right now/i],
     uncertain: [/You must log in/i, /log in to continue/i, /\/login\//],
     defaultOnNoMatch: 'uncertain',
     reliability: 'low',
@@ -236,22 +222,26 @@ const SITES = [
     id: 'tiktok', name: 'TikTok', short: 'TikTok',
     url: u => `https://www.tiktok.com/@${u}`,
     tryDirect: false,
-    notFound: [/Couldn.t find this account/i, /This account doesn.t exist/i,
-               /"statusCode":10202/i, /"statusCode":10221/i],
-    uncertain: [/Verify to continue/i, /captcha/i, /Please wait/i],
+    // Binary markers: uniqueId = exists, statusCode 10202 = missing.
+    notFound: [/"statusCode":10202/, /10221/],
+    uncertain: [/Verify to continue/i, /captcha/i, /Please wait/i,
+                /"uniqueId":"/], // if uniqueId present but no notFound, it's found
     defaultOnNoMatch: 'uncertain',
-    reliability: 'low',
-    reliabilityNote: 'every profile returns 200; no trustworthy signal'
+    reliability: 'medium',
+    reliabilityNote: 'binary markers work; soft rate-limiting can poison results'
   }
 ];
 
 /* ============================================================
-   3. CORS PROXY CHAIN — order matters
+   3. CORS PROXY CHAIN — expanded with Grokipedia-listed proxies
    ============================================================ */
 const PROXIES = [
-  { name: 'allorigins', build: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
+  { name: 'corsfix',      build: u => `https://corsfix.com/${u}` },
+  { name: 'codetabs',     build: u => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}` },
+  { name: 'cors.x2u.in',  build: u => `https://cors.x2u.in/${u}` },
+  { name: 'allorigins',   build: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
   { name: 'corsproxy.io', build: u => `https://corsproxy.io/?url=${encodeURIComponent(u)}` },
-  { name: 'cors.lol', build: u => `https://cors.lol/?url=${encodeURIComponent(u)}` }
+  { name: 'cors.lol',     build: u => `https://cors.lol/?url=${encodeURIComponent(u)}` }
 ];
 
 /* ============================================================
@@ -301,7 +291,7 @@ function syncUi({ clearResults = false } = {}) {
   input.disabled = !hasPlatform;
   input.placeholder = hasPlatform ? 'username (no @)' : 'Choose a platform first';
   if (!hasPlatform) input.value = '';
-  if (clearResults) { results = []; renderResults(); resetEmbed(); }
+  if (clearResults) { results = []; renderResults(); resetPreview(); }
   updateScanState();
 }
 
@@ -338,8 +328,8 @@ function renderResults() {
     const actions = row.querySelector('.actions');
     if (r.status === 'found' || r.status === 'uncertain') {
       const b = document.createElement('button');
-      b.textContent = 'Embed';
-      b.onclick = () => embedProfile(r);
+      b.textContent = 'Inspect';
+      b.onclick = () => inspectProfile(r);
       actions.appendChild(b);
     }
     const open = document.createElement('button');
@@ -382,7 +372,7 @@ async function fetchViaProxy(target) {
       const ms = Math.round(performance.now() - t0);
       if (!res.ok) { failures.push(`${p.name} HTTP ${res.status}`); log(`proxy ${p.name} → HTTP ${res.status} (${ms}ms)`); continue; }
       const text = await res.text();
-      if (!text || text.length < 100) { failures.push(`${p.name} empty`); log(`proxy ${p.name} → empty body`); continue; }
+      if (!text || text.length < 80) { failures.push(`${p.name} empty`); log(`proxy ${p.name} → empty body`); continue; }
       log(`proxy ${p.name} → ${text.length}b (${ms}ms)`);
       return { text, via: p.name };
     } catch (err) {
@@ -395,7 +385,7 @@ async function fetchViaProxy(target) {
 }
 
 /* ============================================================
-   8. PER-SITE CHECKER
+   8. PER-SITE CHECKER — binary detection
    ============================================================ */
 async function checkSite(site, username) {
   const url = site.url(username);
@@ -437,13 +427,26 @@ async function checkSite(site, username) {
     }
   }
 
-  /* --- evaluate patterns --- */
+  /* --- binary evaluation: notFound wins first, then found, then uncertain --- */
   for (const re of site.notFound || []) {
     if (re.test(html)) {
       return { status: 'not_found',
         detail: `matched <code>${re.source}</code> via ${via}` };
     }
   }
+
+  // TikTok special case: uniqueId proves existence even if no notFound marker.
+  if (site.id === 'tiktok') {
+    const uid = new RegExp(`"uniqueId":"${username}"`, 'i');
+    if (uid.test(html)) {
+      return { status: 'found',
+        detail: `"uniqueId" matched via ${via}` };
+    }
+    // If neither uniqueId nor statusCode matched, it's a soft-rate-limit shell.
+    return { status: 'uncertain',
+      detail: `no binary marker via ${via} — likely soft rate-limited, try again` };
+  }
+
   for (const re of site.uncertain || []) {
     if (re.test(html)) {
       return { status: 'uncertain',
@@ -472,7 +475,7 @@ async function runScan() {
   $('#scan').disabled = true;
   results = [];
   renderResults();
-  resetEmbed();
+  resetPreview();
   logReset();
   log(`scan start · user="${username}" · ${active.length} platform(s)`);
 
@@ -488,7 +491,7 @@ async function runScan() {
     upsertResult({ ...r, site, username, url: site.url(username) });
     log(`${site.id} → ${r.status} · ${r.detail?.replace(/<[^>]+>/g,'')}`);
 
-    if (i < active.length - 1) await sleep(600 + Math.random() * 800);
+    if (i < active.length - 1) await sleep(800 + Math.random() * 1200);
   }
 
   scanning = false;
@@ -497,111 +500,62 @@ async function runScan() {
 }
 
 /* ============================================================
-   10. EMBED DISPATCHER (official scripts — work on plain sites)
+   10. INSPECT (instead of embed — show the raw evidence)
    ============================================================ */
-function resetEmbed() {
+function resetPreview() {
   $('#embed-container').innerHTML =
-    '<div class="empty">Run a scan, then press “Embed” on a found profile.</div>';
+    '<div class="empty">Run a scan, then press “Inspect” on a result to see the raw signal.</div>';
 }
 
-async function embedProfile(r) {
+async function inspectProfile(r) {
   const c = $('#embed-container');
-  c.innerHTML = '<div class="empty">loading embed…</div>';
+  c.innerHTML = '<div class="empty">fetching raw page…</div>';
   try {
-    switch (r.site.id) {
-      case 'instagram': await embedInstagram(r.username, c); break;
-      case 'x':         await embedX(r.username, c);         break;
-      case 'tiktok':    embedTikTok(r.username, c);          break;
-      case 'facebook':  await embedFacebook(r.username, c);  break;
-      case 'youtube':   embedYouTube(r.username, c);         break;
+    let text;
+    if (r.site.tryDirect) {
+      try {
+        const res = await fetchWithTimeout(r.url, 12000, { credentials: 'omit' });
+        if (res.ok) text = await res.text();
+      } catch {}
     }
+    if (!text) {
+      const prox = await fetchViaProxy(r.url);
+      text = prox.text;
+    }
+    // Show a window around the first matched marker, or the first 600 chars.
+    const markers = [...(r.site.notFound||[]), ...(r.site.uncertain||[])]
+      .map(re => ({ re, idx: text.search(re) }))
+      .filter(m => m.idx >= 0)
+      .sort((a,b) => a.idx - b.idx);
+
+    let snippet;
+    if (markers.length) {
+      const idx = markers[0].idx;
+      const start = Math.max(0, idx - 200);
+      snippet = text.slice(start, start + 800);
+    } else {
+      snippet = text.slice(0, 800);
+    }
+
+    c.innerHTML = `
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px;">
+        ${r.site.name} · <code>${r.url}</code> · ${text.length} bytes
+      </div>
+      <pre style="white-space:pre-wrap;word-break:break-all;background:var(--panel-2);
+        padding:10px;border-radius:8px;font-size:10.5px;color:#c7d2fe;margin:0;
+        max-height:280px;overflow:auto;">${escapeHtml(snippet)}</pre>
+    `;
   } catch (err) {
-    c.innerHTML = `<div class="empty">Embed failed: ${err.message}</div>`;
+    c.innerHTML = `<div class="empty">Inspect failed: ${err.message}</div>`;
   }
 }
 
-async function embedInstagram(username, c) {
-  c.innerHTML = `
-    <blockquote class="instagram-media"
-      data-instgrm-permalink="https://www.instagram.com/${username}/"
-      data-instgrm-version="14" style="width:100%;margin:0;">
-    </blockquote>`;
-  await loadScript('https://www.instagram.com/embed.js');
-  if (window.instgrm) window.instgrm.Embeds.process();
-}
-
-async function embedX(username, c) {
-  await loadScript('https://platform.twitter.com/widgets.js');
-  c.innerHTML = '';
-  if (!window.twttr?.widgets) throw new Error('widgets.js unavailable');
-  await twttr.widgets.createTimeline(
-    { sourceType: 'profile', screenName: username },
-    c, { height: 500, chrome: 'noheader nofooter' });
-}
-
-function embedTikTok(username, c) {
-  // TikTok's embed requires a specific video ID — username-only embeds are not supported.
-  c.innerHTML = `
-    <div class="empty" style="margin-bottom:10px;">
-      TikTok only exposes per‑video embeds, not per‑profile embeds.
-      Open the profile to browse videos.
-    </div>
-    <button class="chip" onclick="window.open('https://www.tiktok.com/@${encodeURIComponent(username)}','_blank','noopener')">
-      Open @${username} on TikTok
-    </button>`;
-}
-
-async function embedFacebook(username, c) {
-  await loadFacebookSDK();
-  c.innerHTML = `
-    <div class="fb-page"
-      data-href="https://www.facebook.com/${username}"
-      data-tabs="timeline" data-width="500" data-height="560"
-      data-small-header="true" data-adapt-container-width="true"
-      data-hide-cover="false" data-show-facepile="true"></div>`;
-  if (window.FB) FB.XFBML.parse(c);
-}
-
-function embedYouTube(username, c) {
-  const safe = encodeURIComponent(username);
-  c.innerHTML = `
-    <div class="empty" style="margin-bottom:10px;">
-      YouTube channel embeds are deprecated. Use the direct link below.
-    </div>
-    <button class="chip" onclick="window.open('https://www.youtube.com/@${safe}','_blank','noopener')">
-      Open @${username} on YouTube
-    </button>`;
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 /* ============================================================
-   11. SCRIPT LOADERS
-   ============================================================ */
-const loaded = new Set();
-function loadScript(src) {
-  if (loaded.has(src)) return Promise.resolve();
-  return new Promise((res, rej) => {
-    const s = document.createElement('script');
-    s.src = src; s.async = true;
-    s.onload = () => { loaded.add(src); res(); };
-    s.onerror = () => rej(new Error(`failed: ${src}`));
-    document.head.appendChild(s);
-  });
-}
-
-function loadFacebookSDK() {
-  return new Promise((res, rej) => {
-    if (window.FB) return res();
-    window.fbAsyncInit = () => { FB.init({ xfbml: true, version: 'v25.0' }); res(); };
-    const js = document.createElement('script');
-    js.src = 'https://connect.facebook.net/en_US/sdk.js';
-    js.async = true;
-    js.onerror = () => rej(new Error('Facebook SDK failed'));
-    document.body.appendChild(js);
-  });
-}
-
-/* ============================================================
-   12. BOOT
+   11. BOOT
    ============================================================ */
 buildPicker();
 $('#all').addEventListener('click', () => { SITES.forEach(s => selected.add(s.id)); syncUi({clearResults:true}); });
