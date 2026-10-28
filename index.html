@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Profile Sweep — binary edition</title>
+<title>Profile Sweep — blocked-aware edition</title>
 <style>
   :root {
     --bg:#0b0d12; --panel:#141821; --panel-2:#1a1f2b; --border:#252b3a;
     --text:#e7eaf0; --muted:#8b93a1; --muted-2:#5c6472;
-    --found:#22c55e; --not-found:#ef4444; --uncertain:#f59e0b;
-    --error:#6b7280; --checking:#3b82f6; --accent:#6366f1;
+    --found:#22c55e; --not-found:#ef4444; --blocked:#a855f7;
+    --uncertain:#f59e0b; --error:#6b7280; --checking:#3b82f6; --accent:#6366f1;
     --radius:12px;
   }
   *{box-sizing:border-box}
@@ -38,8 +38,6 @@
   .platform span{font-size:10px;color:var(--muted);transition:color .12s;text-align:center;line-height:1.2}
   .platform.on{border-color:var(--accent);background:rgba(99,102,241,.14)}
   .platform.on svg,.platform.on span{color:var(--text)}
-  .platform[data-reliability="low"]::after{content:"";position:absolute;top:6px;right:6px;
-    width:5px;height:5px;border-radius:50%;background:var(--uncertain);opacity:.9}
 
   .tools{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
   .chip{background:transparent;border:1px solid var(--border);color:var(--muted);
@@ -66,6 +64,7 @@
   .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:7px;background:var(--muted)}
   .dot.found{background:var(--found);box-shadow:0 0 0 3px rgba(34,197,94,.15)}
   .dot.not_found{background:var(--not-found);box-shadow:0 0 0 3px rgba(239,68,68,.15)}
+  .dot.blocked{background:var(--blocked);box-shadow:0 0 0 3px rgba(168,85,247,.15)}
   .dot.uncertain{background:var(--uncertain);box-shadow:0 0 0 3px rgba(245,158,11,.15)}
   .dot.error{background:var(--error)}
   .dot.checking{background:var(--checking);animation:pulse 1s infinite}
@@ -76,6 +75,7 @@
     text-transform:uppercase;letter-spacing:.05em}
   .badge.found{background:rgba(34,197,94,.15);color:#4ade80}
   .badge.not_found{background:rgba(239,68,68,.15);color:#f87171}
+  .badge.blocked{background:rgba(168,85,247,.15);color:#c084fc}
   .badge.uncertain{background:rgba(245,158,11,.15);color:#fbbf24}
   .badge.error{background:rgba(107,114,128,.2);color:#9ca3af}
   .badge.checking{background:rgba(59,130,246,.15);color:#60a5fa}
@@ -98,14 +98,12 @@
   footer{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);
     color:var(--muted-2);font-size:11.5px;line-height:1.65}
   footer strong{color:var(--muted)}
-  footer ul{margin:8px 0 0;padding-left:18px}
-  footer li{margin:3px 0}
   details{margin-top:12px}
   summary{cursor:pointer;color:var(--muted);font-size:11.5px;user-select:none}
   summary:hover{color:var(--text)}
   .log{margin-top:8px;background:var(--panel-2);border-radius:8px;padding:10px;
     font-family:ui-monospace,monospace;font-size:10.5px;color:#9ca3af;
-    max-height:220px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+    max-height:260px;overflow:auto;white-space:pre-wrap;word-break:break-all}
 
   @media (max-width:520px){
     .platforms{grid-template-columns:repeat(3,1fr)}
@@ -118,7 +116,7 @@
 
   <header>
     <h1>Profile Sweep</h1>
-    <p>Binary existence check via public proxies. X and TikTok are reliable today; Instagram and Facebook are not.</p>
+    <p>Blocked-aware existence check. Login-walled platforms are flagged, not guessed.</p>
   </header>
 
   <div class="label">1 · Platforms</div>
@@ -128,6 +126,7 @@
     <button class="chip" id="none">Clear</button>
     <span class="legend">
       <span class="dot" style="background:var(--found)"></span>found
+      <span class="dot" style="background:var(--blocked)"></span>blocked
       <span class="dot" style="background:var(--uncertain)"></span>uncertain
       <span class="dot" style="background:var(--not-found)"></span>not found
     </span>
@@ -147,7 +146,7 @@
   </div>
 
   <footer>
-    <strong>What changed:</strong> the proxy chain now includes Corsfix and CodeTabs; TikTok detection looks for <code>"uniqueId":"…"</code> vs <code>"statusCode":10202</code>; Instagram/Facebook are marked <em>unreliable</em> because their login walls make anonymous checking impossible.
+    <strong>Proxy order:</strong> <code>proxy.cors.sh</code> → <code>ThingProxy</code> → <code>allorigins</code> → <code>corsproxy.dev</code>. A dead proxy is skipped after a 2‑second health probe instead of an 18‑second timeout.
     <details>
       <summary>Show request log</summary>
       <div class="log" id="log">Waiting…</div>
@@ -170,7 +169,7 @@ const ICONS = {
 };
 
 /* ============================================================
-   2. PLATFORMS — binary detection config
+   2. PLATFORMS — with blocked patterns
    ============================================================ */
 const SITES = [
   {
@@ -179,10 +178,9 @@ const SITES = [
     tryDirect: true,
     notFound: [/This account doesn.t exist/i, /Account suspended/i,
                /"errors":\[\{[^}]*not found/i],
-    uncertain: [/Something went wrong/i, /Rate limit exceeded/i],
+    blocked: [/Rate limit exceeded/i, /Something went wrong/i],
     defaultOnNoMatch: 'found',
-    reliability: 'high',
-    reliabilityNote: 'direct fetch works; X may change policy'
+    reliability: 'high'
   },
   {
     id: 'youtube', name: 'YouTube', short: 'YouTube',
@@ -190,59 +188,54 @@ const SITES = [
     tryDirect: false,
     notFound: [/This channel does not exist/i, /This page isn.t available/i,
                /The requested URL was not found/i],
-    uncertain: [/sign in to confirm/i, /Verify you.re human/i, /captcha/i],
+    blocked: [/sign in to confirm/i, /Verify you.re human/i, /captcha/i],
     defaultOnNoMatch: 'found',
-    reliability: 'medium',
-    reliabilityNote: 'via proxy; usually accurate'
+    reliability: 'medium'
   },
   {
     id: 'instagram', name: 'Instagram', short: 'Instagram',
     url: u => `https://www.instagram.com/${u}/`,
     tryDirect: false,
-    // Instagram returns the same login-wall shell for real and fake users.
-    // We only mark NOT_FOUND if a proxy explicitly returns a 404-page body.
     notFound: [/Page Not Found/i, /Sorry, this page isn.t available/i],
-    uncertain: [/accounts\/login/i, /Log in . Instagram/i,
-                /"require_login":true/i, /"message":"Page Not Found"/i],
+    // Instagram login wall: real and fake both hit this.
+    blocked: [/accounts\/login/i, /Log in . Instagram/i,
+              /"require_login":true/i, /"message":"Page Not Found"/i],
     defaultOnNoMatch: 'uncertain',
-    reliability: 'low',
-    reliabilityNote: 'login wall masks existence; anonymous check impossible'
+    reliability: 'low'
   },
   {
     id: 'facebook', name: 'Facebook', short: 'Facebook',
     url: u => `https://www.facebook.com/${u}`,
     tryDirect: false,
     notFound: [/This content isn.t available/i, /content isn.t available right now/i],
-    uncertain: [/You must log in/i, /log in to continue/i, /\/login\//],
+    blocked: [/You must log in/i, /log in to continue/i, /\/login\//],
     defaultOnNoMatch: 'uncertain',
-    reliability: 'low',
-    reliabilityNote: 'requires login; parsing is unreliable'
+    reliability: 'low'
   },
   {
     id: 'tiktok', name: 'TikTok', short: 'TikTok',
     url: u => `https://www.tiktok.com/@${u}`,
     tryDirect: false,
-    // Binary markers: uniqueId = exists, statusCode 10202 = missing.
     notFound: [/"statusCode":10202/, /10221/],
-    uncertain: [/Verify to continue/i, /captcha/i, /Please wait/i,
-                /"uniqueId":"/], // if uniqueId present but no notFound, it's found
+    blocked: [/Verify to continue/i, /captcha/i, /Please wait/i],
     defaultOnNoMatch: 'uncertain',
-    reliability: 'medium',
-    reliabilityNote: 'binary markers work; soft rate-limiting can poison results'
+    reliability: 'medium'
   }
 ];
 
 /* ============================================================
-   3. CORS PROXY CHAIN — expanded with Grokipedia-listed proxies
+   3. CORS PROXIES — active first, health-checked
    ============================================================ */
 const PROXIES = [
-  { name: 'corsfix',      build: u => `https://corsfix.com/${u}` },
-  { name: 'codetabs',     build: u => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}` },
-  { name: 'cors.x2u.in',  build: u => `https://cors.x2u.in/${u}` },
-  { name: 'allorigins',   build: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
-  { name: 'corsproxy.io', build: u => `https://corsproxy.io/?url=${encodeURIComponent(u)}` },
-  { name: 'cors.lol',     build: u => `https://cors.lol/?url=${encodeURIComponent(u)}` }
+  { name: 'cors.sh',       build: u => `https://proxy.cors.sh/${u}` },
+  { name: 'thingproxy',    build: u => `https://thingproxy.freeboard.io/fetch/${u}` },
+  { name: 'allorigins',    build: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
+  { name: 'corsproxy.dev', build: u => `https://api.corsproxy.dev/proxy?url=${encodeURIComponent(u)}` }
 ];
+
+/* Health probe: a tiny, stable target. If a proxy fails this, skip it for the session. */
+const HEALTH_URL = 'https://httpbin.org/html';
+const proxyHealth = new Map(); // name -> 'ok' | 'fail' | 'unknown'
 
 /* ============================================================
    4. STATE + HELPERS
@@ -253,14 +246,13 @@ let scanning = false;
 const $ = s => document.querySelector(s);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-const logEl = () => $('#log');
 function log(msg) {
-  const el = logEl();
+  const el = $('#log');
   const time = new Date().toLocaleTimeString();
   el.textContent += `\n[${time}] ${msg}`;
   el.scrollTop = el.scrollHeight;
 }
-function logReset() { logEl().textContent = 'session start'; }
+function logReset() { $('#log').textContent = 'session start'; }
 
 /* ============================================================
    5. PLATFORM PICKER
@@ -272,8 +264,7 @@ function buildPicker() {
     b.type = 'button';
     b.className = 'platform';
     b.dataset.id = site.id;
-    b.dataset.reliability = site.reliability;
-    b.title = `${site.name} — ${site.reliabilityNote}`;
+    b.title = site.name;
     b.innerHTML = `${ICONS[site.id]}<span>${site.short}</span>`;
     b.addEventListener('click', () => {
       selected.has(site.id) ? selected.delete(site.id) : selected.add(site.id);
@@ -326,7 +317,7 @@ function renderResults() {
       <div class="actions"></div>
     `;
     const actions = row.querySelector('.actions');
-    if (r.status === 'found' || r.status === 'uncertain') {
+    if (r.status === 'found' || r.status === 'uncertain' || r.status === 'blocked') {
       const b = document.createElement('button');
       b.textContent = 'Inspect';
       b.onclick = () => inspectProfile(r);
@@ -361,18 +352,43 @@ async function fetchWithTimeout(url, ms, init = {}) {
   }
 }
 
-/** Try each proxy until one returns text. Returns { text, via }. */
+async function probeProxy(proxy) {
+  if (proxyHealth.get(proxy.name) === 'fail') return false;
+  if (proxyHealth.get(proxy.name) === 'ok') return true;
+  try {
+    const res = await fetchWithTimeout(proxy.build(HEALTH_URL), 2500);
+    const ok = res.ok;
+    proxyHealth.set(proxy.name, ok ? 'ok' : 'fail');
+    log(`health ${proxy.name} → ${ok ? 'ok' : 'HTTP '+res.status}`);
+    return ok;
+  } catch (err) {
+    proxyHealth.set(proxy.name, 'fail');
+    log(`health ${proxy.name} → ${err.name}`);
+    return false;
+  }
+}
+
 async function fetchViaProxy(target) {
   const failures = [];
   for (const p of PROXIES) {
+    const healthy = await probeProxy(p);
+    if (!healthy) { failures.push(`${p.name} unhealthy`); continue; }
     const proxied = p.build(target);
     const t0 = performance.now();
     try {
-      const res = await fetchWithTimeout(proxied, 18000);
+      const res = await fetchWithTimeout(proxied, 12000);
       const ms = Math.round(performance.now() - t0);
-      if (!res.ok) { failures.push(`${p.name} HTTP ${res.status}`); log(`proxy ${p.name} → HTTP ${res.status} (${ms}ms)`); continue; }
+      if (!res.ok) {
+        failures.push(`${p.name} HTTP ${res.status}`);
+        log(`proxy ${p.name} → HTTP ${res.status} (${ms}ms)`);
+        continue;
+      }
       const text = await res.text();
-      if (!text || text.length < 80) { failures.push(`${p.name} empty`); log(`proxy ${p.name} → empty body`); continue; }
+      if (!text || text.length < 80) {
+        failures.push(`${p.name} empty`);
+        log(`proxy ${p.name} → empty (${ms}ms)`);
+        continue;
+      }
       log(`proxy ${p.name} → ${text.length}b (${ms}ms)`);
       return { text, via: p.name };
     } catch (err) {
@@ -385,19 +401,17 @@ async function fetchViaProxy(target) {
 }
 
 /* ============================================================
-   8. PER-SITE CHECKER — binary detection
+   8. PER-SITE CHECKER — blocked-aware
    ============================================================ */
 async function checkSite(site, username) {
   const url = site.url(username);
   let html = null, via = null;
 
-  /* --- attempt 1: direct (only for sites known to work today) --- */
   if (site.tryDirect) {
     const t0 = performance.now();
     try {
-      const res = await fetchWithTimeout(url, 12000, {
-        credentials: 'omit',
-        headers: { Accept: 'text/html' }
+      const res = await fetchWithTimeout(url, 10000, {
+        credentials: 'omit', headers: { Accept: 'text/html' }
       });
       const ms = Math.round(performance.now() - t0);
       if (res.status === 404) {
@@ -416,7 +430,6 @@ async function checkSite(site, username) {
     }
   }
 
-  /* --- attempt 2: proxy chain --- */
   if (html === null) {
     try {
       const r = await fetchViaProxy(url);
@@ -427,7 +440,14 @@ async function checkSite(site, username) {
     }
   }
 
-  /* --- binary evaluation: notFound wins first, then found, then uncertain --- */
+  /* blocked check runs FIRST — a login wall overrides not-found patterns */
+  for (const re of site.blocked || []) {
+    if (re.test(html)) {
+      return { status: 'blocked',
+        detail: `login wall / rate limit <code>${re.source}</code> via ${via} — existence not determinable` };
+    }
+  }
+
   for (const re of site.notFound || []) {
     if (re.test(html)) {
       return { status: 'not_found',
@@ -435,30 +455,19 @@ async function checkSite(site, username) {
     }
   }
 
-  // TikTok special case: uniqueId proves existence even if no notFound marker.
   if (site.id === 'tiktok') {
     const uid = new RegExp(`"uniqueId":"${username}"`, 'i');
     if (uid.test(html)) {
-      return { status: 'found',
-        detail: `"uniqueId" matched via ${via}` };
+      return { status: 'found', detail: `"uniqueId" matched via ${via}` };
     }
-    // If neither uniqueId nor statusCode matched, it's a soft-rate-limit shell.
     return { status: 'uncertain',
-      detail: `no binary marker via ${via} — likely soft rate-limited, try again` };
-  }
-
-  for (const re of site.uncertain || []) {
-    if (re.test(html)) {
-      return { status: 'uncertain',
-        detail: `hit <code>${re.source}</code> via ${via} — verify manually` };
-    }
+      detail: `no binary marker via ${via} — retry later` };
   }
 
   const fallback = site.defaultOnNoMatch || 'uncertain';
   return {
     status: fallback,
-    detail: `no marker matched (${html.length}b via ${via})` +
-            (fallback === 'uncertain' ? ' — treat as a lead only' : '')
+    detail: `no marker matched (${html.length}b via ${via})`
   };
 }
 
@@ -481,17 +490,14 @@ async function runScan() {
 
   for (let i = 0; i < active.length; i++) {
     const site = active[i];
-
-    upsertResult({
-      site, username, url: site.url(username),
-      status: 'checking', detail: 'checking…'
-    });
+    upsertResult({ site, username, url: site.url(username),
+      status: 'checking', detail: 'checking…' });
 
     const r = await checkSite(site, username);
     upsertResult({ ...r, site, username, url: site.url(username) });
     log(`${site.id} → ${r.status} · ${r.detail?.replace(/<[^>]+>/g,'')}`);
 
-    if (i < active.length - 1) await sleep(800 + Math.random() * 1200);
+    if (i < active.length - 1) await sleep(700 + Math.random() * 900);
   }
 
   scanning = false;
@@ -500,11 +506,11 @@ async function runScan() {
 }
 
 /* ============================================================
-   10. INSPECT (instead of embed — show the raw evidence)
+   10. INSPECT
    ============================================================ */
 function resetPreview() {
   $('#embed-container').innerHTML =
-    '<div class="empty">Run a scan, then press “Inspect” on a result to see the raw signal.</div>';
+    '<div class="empty">Run a scan, then press “Inspect” to see the raw signal.</div>';
 }
 
 async function inspectProfile(r) {
@@ -514,7 +520,7 @@ async function inspectProfile(r) {
     let text;
     if (r.site.tryDirect) {
       try {
-        const res = await fetchWithTimeout(r.url, 12000, { credentials: 'omit' });
+        const res = await fetchWithTimeout(r.url, 10000, { credentials: 'omit' });
         if (res.ok) text = await res.text();
       } catch {}
     }
@@ -522,8 +528,8 @@ async function inspectProfile(r) {
       const prox = await fetchViaProxy(r.url);
       text = prox.text;
     }
-    // Show a window around the first matched marker, or the first 600 chars.
-    const markers = [...(r.site.notFound||[]), ...(r.site.uncertain||[])]
+
+    const markers = [...(r.site.blocked||[]), ...(r.site.notFound||[])]
       .map(re => ({ re, idx: text.search(re) }))
       .filter(m => m.idx >= 0)
       .sort((a,b) => a.idx - b.idx);
@@ -531,10 +537,9 @@ async function inspectProfile(r) {
     let snippet;
     if (markers.length) {
       const idx = markers[0].idx;
-      const start = Math.max(0, idx - 200);
-      snippet = text.slice(start, start + 800);
+      snippet = text.slice(Math.max(0, idx - 180), idx + 700);
     } else {
-      snippet = text.slice(0, 800);
+      snippet = text.slice(0, 700);
     }
 
     c.innerHTML = `
